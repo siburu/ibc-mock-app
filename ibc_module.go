@@ -2,7 +2,6 @@ package mockapp
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 
 	errorsmod "cosmossdk.io/errors"
@@ -16,6 +15,16 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	"github.com/datachainlab/ibc-mock-app/keeper"
 	"github.com/datachainlab/ibc-mock-app/types"
+)
+
+const (
+	MOCK_PACKET_DATA       = "mock packet data"
+	MOCK_FAIL_PACKET_DATA  = "mock failed packet data"
+	MOCK_ASYNC_PACKET_DATA = "mock async packet data"
+
+	SUCCESSFUL_ACKNOWLEDGEMENT       = "mock acknowledgement"
+	SUCCESSFUL_ASYNC_ACKNOWLEDGEMENT = "mock async acknowledgement"
+	FAILED_ACKNOWLEDGEMENT           = "mock failed acknowledgement"
 )
 
 var (
@@ -160,21 +169,45 @@ func (im IBCModule) OnRecvPacket(
 	packet channeltypes.Packet,
 	relayer sdk.AccAddress,
 ) ibcexported.Acknowledgement {
-	return types.NewAcknowledgement(packet.GetData())
+	data := packet.GetData()
+	if bytes.Equal(data, []byte(MOCK_PACKET_DATA)) {
+		return types.NewSuccessfulAcknowledgement(SUCCESSFUL_ACKNOWLEDGEMENT)
+	} else if bytes.Equal(data, []byte(MOCK_ASYNC_PACKET_DATA)) {
+		return nil
+	} else {
+		return types.NewFailedAcknowledgement(FAILED_ACKNOWLEDGEMENT)
+	}
 }
 
 // OnAcknowledgementPacket implements the IBCModule interface
 func (im IBCModule) OnAcknowledgementPacket(
 	ctx sdk.Context,
 	packet channeltypes.Packet,
-	acknowledgement []byte,
+	ack []byte,
 	relayer sdk.AccAddress,
 ) error {
-	if bytes.Equal(packet.GetData(), acknowledgement) {
-		return nil
+	data := packet.GetData()
+
+	if bytes.Equal(data, []byte(MOCK_PACKET_DATA)) {
+		expected := types.NewSuccessfulAcknowledgement(SUCCESSFUL_ACKNOWLEDGEMENT).Acknowledgement()
+		if !bytes.Equal(ack, expected) {
+			return errorsmod.Wrapf(types.ErrUnexpectedAcknowledgement, "got: %s, expected: %s", ack, expected)
+		}
+	} else if bytes.Equal(data, []byte(MOCK_ASYNC_PACKET_DATA)) {
+		expected := types.NewSuccessfulAcknowledgement(SUCCESSFUL_ASYNC_ACKNOWLEDGEMENT).Acknowledgement()
+		if !bytes.Equal(ack, expected) {
+			return errorsmod.Wrapf(types.ErrUnexpectedAcknowledgement, "got: %s, expected: %s", ack, expected)
+		}
+	} else if bytes.Equal(data, []byte(MOCK_FAIL_PACKET_DATA)) {
+		expected := types.NewSuccessfulAcknowledgement(FAILED_ACKNOWLEDGEMENT).Acknowledgement()
+		if !bytes.Equal(ack, expected) {
+			return errorsmod.Wrapf(types.ErrUnexpectedAcknowledgement, "got: %s, expected: %s", ack, expected)
+		}
 	} else {
-		return fmt.Errorf("unexpected acknowledgement: expected=%v actual=%v", packet.GetData(), acknowledgement)
+		return errorsmod.Wrapf(types.ErrUnexpectedPacket, "unexpected packet data: %s", data)
 	}
+
+	return nil
 }
 
 // OnTimeoutPacket implements the IBCModule interface

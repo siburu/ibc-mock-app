@@ -1,23 +1,52 @@
 package types
 
 import (
+	"encoding/json"
+
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 )
 
-type Acknowledgement struct {
-	data []byte
+type SuccessfulAcknowledgement struct {
+	Result []byte `json:"result"`
 }
 
-var _ ibcexported.Acknowledgement = (*Acknowledgement)(nil)
-
-func NewAcknowledgement(data []byte) Acknowledgement {
-	return Acknowledgement{data: data}
+type FailedAcknowledgement struct {
+	Error string `json:"error"`
 }
 
-func (ack Acknowledgement) Success() bool {
+var (
+	_ ibcexported.Acknowledgement = (*SuccessfulAcknowledgement)(nil)
+	_ ibcexported.Acknowledgement = (*FailedAcknowledgement)(nil)
+)
+
+func NewSuccessfulAcknowledgement(r string) SuccessfulAcknowledgement {
+	return SuccessfulAcknowledgement{Result: []byte(r)}
+}
+
+func (SuccessfulAcknowledgement) Success() bool {
 	return true
 }
 
-func (ack Acknowledgement) Acknowledgement() []byte {
-	return ack.data
+func (a SuccessfulAcknowledgement) Acknowledgement() []byte {
+	if bz, err := json.Marshal(a); err != nil {
+		panic(err)
+	} else {
+		return bz
+	}
+}
+
+func NewFailedAcknowledgement(e string) FailedAcknowledgement {
+	return FailedAcknowledgement{Error: e}
+}
+
+func (FailedAcknowledgement) Success() bool {
+	return false
+}
+
+func (a FailedAcknowledgement) Acknowledgement() []byte {
+	if bz, err := json.Marshal(a); err != nil {
+		panic(err)
+	} else {
+		return bz
+	}
 }
