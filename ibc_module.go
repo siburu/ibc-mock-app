@@ -19,7 +19,6 @@ import (
 
 const (
 	MOCK_PACKET_DATA       = "mock packet data"
-	MOCK_FAIL_PACKET_DATA  = "mock failed packet data"
 	MOCK_ASYNC_PACKET_DATA = "mock async packet data"
 
 	SUCCESSFUL_ACKNOWLEDGEMENT       = "mock acknowledgement"
@@ -198,13 +197,11 @@ func (im IBCModule) OnAcknowledgementPacket(
 		if !bytes.Equal(ack, expected) {
 			return errorsmod.Wrapf(types.ErrUnexpectedAcknowledgement, "got: %s, expected: %s", ack, expected)
 		}
-	} else if bytes.Equal(data, []byte(MOCK_FAIL_PACKET_DATA)) {
+	} else {
 		expected := types.NewSuccessfulAcknowledgement(FAILED_ACKNOWLEDGEMENT).Acknowledgement()
 		if !bytes.Equal(ack, expected) {
 			return errorsmod.Wrapf(types.ErrUnexpectedAcknowledgement, "got: %s, expected: %s", ack, expected)
 		}
-	} else {
-		return errorsmod.Wrapf(types.ErrUnexpectedPacket, "unexpected packet data: %s", data)
 	}
 
 	return nil
